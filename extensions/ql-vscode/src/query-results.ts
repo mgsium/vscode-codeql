@@ -14,11 +14,12 @@ export class CompletedQuery implements QueryWithResults {
   readonly date: Date;
   readonly time: string;
   readonly query: QueryInfo;
-  readonly result: messages.EvaluationResult;
+  result: messages.EvaluationResult | undefined;
   readonly database: DatabaseInfo;
-  readonly logFileLocation?: string;
+  logFileLocation?: string;
   options: QueryHistoryItemOptions;
   resultCount: number;
+  finishedRunning: boolean;
   dispose: () => void;
 
   /**
@@ -44,6 +45,7 @@ export class CompletedQuery implements QueryWithResults {
     this.database = evaluation.database;
     this.logFileLocation = evaluation.logFileLocation;
     this.options = evaluation.options;
+    this.finishedRunning = evaluation.finishedRunning;
     this.dispose = evaluation.dispose;
 
     this.date = new Date();
@@ -67,6 +69,8 @@ export class CompletedQuery implements QueryWithResults {
   }
 
   get statusString(): string {
+    // RETURNTO: Remove this
+    if(!this.result) return '';
     switch (this.result.resultType) {
       case messages.QueryResultType.CANCELLATION:
         return `cancelled after ${this.result.evaluationTime / 1000} seconds`;
@@ -113,6 +117,8 @@ export class CompletedQuery implements QueryWithResults {
   }
 
   get didRunSuccessfully(): boolean {
+    // RETURNTO: Remove this
+    if(!this.result) return false;
     return this.result.resultType === messages.QueryResultType.SUCCESS;
   }
 

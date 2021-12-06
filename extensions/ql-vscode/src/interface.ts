@@ -335,7 +335,8 @@ export class InterfaceManager extends DisposableObject {
     forceReveal: WebviewReveal,
     shouldKeepOldResultsWhileRendering = false
   ): Promise<void> {
-    if (results.result.resultType !== messages.QueryResultType.SUCCESS) {
+    // RETURNTO: Remove 'results.result &&'
+    if (results.result && results.result.resultType !== messages.QueryResultType.SUCCESS) {
       return;
     }
 
