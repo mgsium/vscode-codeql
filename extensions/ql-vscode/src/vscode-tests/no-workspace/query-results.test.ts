@@ -116,7 +116,7 @@ describe('CompletedQuery', () => {
     completedQuery.result!.resultType = QueryResultType.SUCCESS;
     expect(completedQuery.statusString).to.eq('finished in 2 seconds');
 
-    completedQuery.result.resultType = QueryResultType.TIMEOUT;
+    completedQuery.result!.resultType = QueryResultType.TIMEOUT;
     expect(completedQuery.statusString).to.eq('timed out after 2 seconds');
 
   });
