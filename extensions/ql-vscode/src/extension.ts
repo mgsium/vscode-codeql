@@ -58,7 +58,7 @@ import { QueryHistoryManager } from './query-history';
 import { CompletedQuery } from './query-results';
 import * as qsClient from './queryserver-client';
 import { displayQuickQuery } from './quick-query';
-import { compileAndRunQueryAgainstDatabase, createResult, initQuery, QueryWithResults, tmpDirDisposal } from './run-queries';
+import { compileAndRunInitializedQueryAgainstDatabase, createResult, initQuery, QueryWithResults, tmpDirDisposal } from './run-queries';
 import { QLTestAdapterFactory } from './test-adapter';
 import { TestUIService } from './test-ui';
 import { CompareInterfaceManager } from './compare/compare-interface';
@@ -499,14 +499,15 @@ async function activateWithInstalledDistribution(
       qhm.addCompletedQuery(runningQueryInfo);
 
       // Compile Query
-      const results: QueryWithResults  = await compileAndRunQueryAgainstDatabase(
+      const results: QueryWithResults  = await compileAndRunInitializedQueryAgainstDatabase(
         cliServer,
         qs,
         databaseItem,
         quickEval,
-        selectedQuery,
         progress,
-        token
+        token,
+        queryInitInfo.query,
+        queryInitInfo.historyItemOptions
       );
 
       const completeQuery = qhm.buildCompletedQuery(results);

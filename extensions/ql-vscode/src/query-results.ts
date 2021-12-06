@@ -69,8 +69,7 @@ export class CompletedQuery implements QueryWithResults {
   }
 
   get statusString(): string {
-    // RETURNTO: Remove this
-    if(!this.result) return '';
+    if(!this.result) return 'in progress: no results yet';
     switch (this.result.resultType) {
       case messages.QueryResultType.CANCELLATION:
         return `cancelled after ${this.result.evaluationTime / 1000} seconds`;
@@ -117,7 +116,6 @@ export class CompletedQuery implements QueryWithResults {
   }
 
   get didRunSuccessfully(): boolean {
-    // RETURNTO: Remove this
     if(!this.result) return false;
     return this.result.resultType === messages.QueryResultType.SUCCESS;
   }

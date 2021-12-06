@@ -67,7 +67,6 @@ export async function getLocationsForUriString(
       templates
     );
 
-    // RETURNTO: Remove 'results.result &&'
     if (results.result && results.result.resultType == messages.QueryResultType.SUCCESS) {
       links.push(...await getLinksFromResults(results, cli, db, filter));
     }

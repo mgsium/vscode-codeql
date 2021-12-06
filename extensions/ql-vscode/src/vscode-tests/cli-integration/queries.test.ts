@@ -105,7 +105,6 @@ describe('Queries', function() {
       // just check that the query was successful
       expect(result.database.name).to.eq('db');
       expect(result.options.queryText).to.eq(fs.readFileSync(queryPath, 'utf8'));
-      // RETURNTO: Remove 'result.result &&'
       expect(result.result && result.result.resultType).to.eq(QueryResultType.SUCCESS);
     } catch (e) {
       console.error('Test Failed');
@@ -129,10 +128,8 @@ describe('Queries', function() {
       );
 
       // this message would indicate that the databases were not properly reregistered
-      // RETURNTO: Remove 'result.result &&'
       expect(result.result && result.result.message).not.to.eq('No result from server');
       expect(result.options.queryText).to.eq(fs.readFileSync(queryPath, 'utf8'));
-      // RETURNTO: Remove 'result.result &&'
       expect(result.result && result.result.resultType).to.eq(QueryResultType.SUCCESS);
     } catch (e) {
       console.error('Test Failed');
