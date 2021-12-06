@@ -58,7 +58,7 @@ import { QueryHistoryManager } from './query-history';
 import { CompletedQuery } from './query-results';
 import * as qsClient from './queryserver-client';
 import { displayQuickQuery } from './quick-query';
-import { CompilationInfo, compileQuery, createResult, QueryWithResults, runQuery, tmpDirDisposal } from './run-queries';
+import { compileAndRunQueryAgainstDatabase, createResult, initQuery, QueryWithResults, tmpDirDisposal } from './run-queries';
 import { QLTestAdapterFactory } from './test-adapter';
 import { TestUIService } from './test-ui';
 import { CompareInterfaceManager } from './compare/compare-interface';
@@ -477,7 +477,29 @@ async function activateWithInstalledDistribution(
       if (databaseItem === undefined) {
         throw new Error('Can\'t run query without a selected database');
       }
-      const res: CompilationInfo  = await compileQuery(
+
+      // Initialize Query
+      const queryInitInfo = await initQuery(
+        cliServer,
+        databaseItem,
+        quickEval,
+        selectedQuery
+      ); 
+
+      // Create QueryWithResults object
+      const queryInfo = createResult(
+        queryInitInfo.query,
+        databaseItem,
+        queryInitInfo.historyItemOptions,
+        messages.QueryResultType.OOM
+      );
+
+      // Add query to history item view
+      const runningQueryInfo: CompletedQuery = qhm.buildCompletedQuery(queryInfo);
+      qhm.addCompletedQuery(runningQueryInfo);
+
+      // Compile Query
+      const results: QueryWithResults  = await compileAndRunQueryAgainstDatabase(
         cliServer,
         qs,
         databaseItem,
@@ -487,24 +509,9 @@ async function activateWithInstalledDistribution(
         token
       );
 
-      const queryInfo: QueryWithResults = createResult(
-        res.query!,
-        databaseItem,
-        res.historyItemOptions!,
-        res.queryResultType
-      );
-      const cQueryInfo: CompletedQuery = qhm.buildCompletedQuery(queryInfo);
-      qhm.addCompletedQuery(cQueryInfo);
-
-      // Note we must update the query history view after showing results as the
-      // display and sorting might depend on the number of results
-      if (res.queryResultType == messages.QueryResultType.SUCCESS) {
-        // Run query if compilation was successful
-        const results: QueryWithResults = await runQuery(qs, databaseItem, progress, token, res.query!, res.upgradeQlo, res.historyItemOptions!);
-        const completeQuery = qhm.buildCompletedQuery(results);
-        qhm.updateQueryWithResults(completeQuery);
-      }
-      await showResultsForCompletedQuery(cQueryInfo, WebviewReveal.NotForced);
+      const completeQuery = qhm.buildCompletedQuery(results);
+      qhm.updateQueryWithResults(completeQuery);
+      await showResultsForCompletedQuery(runningQueryInfo, WebviewReveal.NotForced);
     }
   }
 
@@ -920,7 +927,4 @@ async function initializeLogging(ctx: ExtensionContext): Promise<void> {
 }
 
 const checkForUpdatesCommand = 'codeQL.checkForUpdatesToCLI';
-function createSyntheticResult(query: CompletedQuery, db: any, historyItemOptions: any, arg3: string, OTHER_ERROR: any): CompletedQuery {
-  throw new Error('Function not implemented.');
-}
 

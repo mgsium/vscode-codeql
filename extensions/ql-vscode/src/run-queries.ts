@@ -547,25 +547,89 @@ export async function determineSelectedQuery(selectedResourceUri: Uri | undefine
   return { queryPath, quickEvalPosition, quickEvalText };
 }
 
-export interface CompilationInfo { 
-  queryResultType: messages.QueryResultType, 
-  upgradeDir: tmp.DirectoryResult,
-  query?: QueryInfo, 
-  upgradeQlo?: any, 
-  historyItemOptions?: QueryHistoryItemOptions 
+export interface QueryInitInfo {
+  query: QueryInfo,
+  historyItemOptions: QueryHistoryItemOptions
 }
 
-export async function compileQuery(
+export async function initQuery(
   cliServer: cli.CodeQLCliServer,
-  qs: qsClient.QueryServerClient,
   db: DatabaseItem,
   quickEval: boolean,
   selectedQueryUri: Uri | undefined,
+  templates?: messages.TemplateDefinitions,
+) : Promise<QueryInitInfo> {
+  if (!db.contents || !db.contents.dbSchemeUri) {
+    throw new Error(`Database ${db.databaseUri} does not have a CodeQL database scheme.`);
+  }
+
+  // Determine which query to run, based on the selection and the active editor.
+  const { queryPath, quickEvalPosition, quickEvalText } = await determineSelectedQuery(selectedQueryUri, quickEval);
+
+  const historyItemOptions: QueryHistoryItemOptions = {};
+  historyItemOptions.isQuickQuery === isQuickQueryPath(queryPath);
+  if (quickEval) {
+    historyItemOptions.queryText = quickEvalText;
+  } else {
+    historyItemOptions.queryText = await fs.readFile(queryPath, 'utf8');
+  }
+
+  // Get the workspace folder paths.
+  const diskWorkspaceFolders = getOnDiskWorkspaceFolders();
+  // Figure out the library path for the query.
+  const packConfig = await cliServer.resolveLibraryPath(diskWorkspaceFolders, queryPath);
+
+  if (!packConfig.dbscheme) {
+    throw new Error('Could not find a database scheme for this query. Please check that you have a valid qlpack.yml file for this query, which refers to a database scheme either in the `dbscheme` field or through one of its dependencies.');
+  }
+
+  // Check whether the query has an entirely different schema from the
+  // database. (Queries that merely need the database to be upgraded
+  // won't trigger this check)
+  // This test will produce confusing results if we ever change the name of the database schema files.
+  const querySchemaName = path.basename(packConfig.dbscheme);
+  const dbSchemaName = path.basename(db.contents.dbSchemeUri.fsPath);
+  if (querySchemaName != dbSchemaName) {
+    void logger.log(`Query schema was ${querySchemaName}, but database schema was ${dbSchemaName}.`);
+    throw new Error(`The query ${path.basename(queryPath)} cannot be run against the selected database (${db.name}): their target languages are different. Please select a different database and try again.`);
+  }
+
+  const qlProgram: messages.QlProgram = {
+    // The project of the current document determines which library path
+    // we use. The `libraryPath` field in this server message is relative
+    // to the workspace root, not to the project root.
+    libraryPath: packConfig.libraryPath,
+    // Since we are compiling and running a query against a database,
+    // we use the database's DB scheme here instead of the DB scheme
+    // from the current document's project.
+    dbschemePath: db.contents.dbSchemeUri.fsPath,
+    queryPath: queryPath
+  };
+
+  // Read the query metadata if possible, to use in the UI.
+  let metadata: QueryMetadata | undefined;
+  try {
+    metadata = await cliServer.resolveMetadata(qlProgram.queryPath);
+  } catch (e) {
+    // Ignore errors and provide no metadata.
+    void logger.log(`Couldn't resolve metadata for ${qlProgram.queryPath}: ${e}`);
+  }
+
+  const query = new QueryInfo(qlProgram, db, packConfig.dbscheme, quickEvalPosition, metadata, templates);
+
+  return { historyItemOptions: historyItemOptions, query: query };
+}
+
+/*export async function compileQuery(
+  cliServer: cli.CodeQLCliServer,
+  qs: qsClient.QueryServerClient,
+  quickEval: boolean,
   progress: ProgressCallback,
   token: CancellationToken,
-  templates?: messages.TemplateDefinitions,
+  query: QueryInfo,
+  historyItemOptions: QueryHistoryItemOptions
 ) : Promise<CompilationInfo> {
-  if (!db.contents || !db.contents.dbSchemeUri) {
+  /*if (!db.contents || !db.contents.dbSchemeUri) {
     throw new Error(`Database ${db.databaseUri} does not have a CodeQL database scheme.`);
   }
 
@@ -708,7 +772,7 @@ export async function runQuery(
     },
     finishedRunning: true
   };
-}
+}*/
 
 export async function compileAndRunQueryAgainstDatabase(
   cliServer: cli.CodeQLCliServer,
