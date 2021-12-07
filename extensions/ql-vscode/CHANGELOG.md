@@ -2,12 +2,23 @@
 
 ## [UNRELEASED]
 
-- Fix the _CodeQL: Open Referenced File_ command for Windows systems. [#979](https://github.com/github/vscode-codeql/pull/979) 
+## 1.5.8 - 2 December 2021
+
+- Emit a more explicit error message when a user tries to add a database with an unzipped source folder to the workspace. [#1021](https://github.com/github/vscode-codeql/pull/1021)
+- Ensure `src.zip` archives are used as the canonical source instead of `src` folders when importing databases. [#1025](https://github.com/github/vscode-codeql/pull/1025)
+
+## 1.5.7 - 23 November 2021
+
+- Fix the _CodeQL: Open Referenced File_ command for Windows systems. [#979](https://github.com/github/vscode-codeql/pull/979)
+- Support large SARIF results files (>4GB) without crashing VS Code. [#1004](https://github.com/github/vscode-codeql/pull/1004)
 - Fix a bug that shows 'Set current database' when hovering over the currently selected database in the databases view. [#976](https://github.com/github/vscode-codeql/pull/976)
 - Fix a bug with importing large databases. Databases over 4GB can now be imported directly from LGTM or from a zip file. This functionality is only available when using CodeQL CLI version 2.6.0 or later. [#971](https://github.com/github/vscode-codeql/pull/971)
-- Replace certain control codes (`U+0000` - `U+001F`) with their corresponding control labels (`U+2400` - `U+241F`)  in the results view. [#963](https://github.com/github/vscode-codeql/pull/963)
+- Replace certain control codes (`U+0000` - `U+001F`) with their corresponding control labels (`U+2400` - `U+241F`) in the results view. [#963](https://github.com/github/vscode-codeql/pull/963)
 - Allow case-insensitive project slugs for GitHub repositories when adding a CodeQL database from LGTM. [#978](https://github.com/github/vscode-codeql/pull/961)
+- Add a _CodeQL: Preview Query Help_ command to generate Markdown previews of `.qhelp` query help files. This command should only be run in trusted workspaces. See https://codeql.github.com/docs/codeql-cli/testing-query-help-files for more information about query help. [#988](https://github.com/github/vscode-codeql/pull/988)
 - Make "Open Referenced File" command accessible from the active editor menu. [#989](https://github.com/github/vscode-codeql/pull/989)
+- Fix a bug where result set names in the result set drop-down were disappearing when viewing a sorted table. [#1007](https://github.com/github/vscode-codeql/pull/1007)
+- Allow query result locations with 0 as the end column value. These are treated as the first column in the line. [#1002](https://github.com/github/vscode-codeql/pull/1002)
 
 ## 1.5.6 - 07 October 2021
 

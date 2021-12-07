@@ -16,6 +16,7 @@ import {
 import { LanguageClient } from 'vscode-languageclient';
 import * as os from 'os';
 import * as path from 'path';
+import * as tmp from 'tmp-promise';
 import { testExplorerExtensionId, TestHub } from 'vscode-test-adapter-api';
 
 import { AstViewer } from './astViewer';
@@ -74,7 +75,8 @@ import {
 import { CodeQlStatusBarHandler } from './status-bar';
 
 import { Credentials } from './authentication';
-import { runRemoteQuery } from './run-remote-query';
+import { runRemoteQuery } from './remote-queries/run-remote-query';
+import { RemoteQueriesInterfaceManager } from './remote-queries/remote-queries-interface';
 
 /**
  * extension.ts
@@ -516,6 +518,32 @@ async function activateWithInstalledDistribution(
     }
   }
 
+  const qhelpTmpDir = tmp.dirSync({ prefix: 'qhelp_', keep: false, unsafeCleanup: true });
+  ctx.subscriptions.push({ dispose: qhelpTmpDir.removeCallback });
+
+  async function previewQueryHelp(
+    selectedQuery: Uri
+  ): Promise<void> {
+    // selectedQuery is unpopulated when executing through the command palette
+    const pathToQhelp = selectedQuery ? selectedQuery.fsPath : window.activeTextEditor?.document.uri.fsPath;
+    if (pathToQhelp) {
+      // Create temporary directory
+      const relativePathToMd = path.basename(pathToQhelp, '.qhelp') + '.md';
+      const absolutePathToMd = path.join(qhelpTmpDir.name, relativePathToMd);
+      const uri = Uri.file(absolutePathToMd);
+      try {
+        await cliServer.generateQueryHelp(pathToQhelp, absolutePathToMd);
+        await commands.executeCommand('markdown.showPreviewToSide', uri);
+      } catch (err) {
+        const errorMessage = err.message.includes('Generating qhelp in markdown') ? (
+          `Could not generate markdown from ${pathToQhelp}: Bad formatting in .qhelp file.`
+        ) : `Could not open a preview of the generated file (${absolutePathToMd}).`;
+        void helpers.showAndLogErrorMessage(errorMessage, { fullMessage: `${errorMessage}\n${err}` });
+      }
+    }
+
+  }
+
   async function openReferencedFile(
     selectedQuery: Uri
   ): Promise<void> {
@@ -739,6 +767,14 @@ async function activateWithInstalledDistribution(
       }
     )
   );
+
+  void logger.log('Initializing remote queries panel interface.');
+  const rmpm = new RemoteQueriesInterfaceManager(
+    ctx,
+    logger
+  );
+  ctx.subscriptions.push(rmpm);
+
   // The "runRemoteQuery" command is internal-only.
   ctx.subscriptions.push(
     commandRunnerWithProgress('codeQL.runRemoteQuery', async (
@@ -766,6 +802,13 @@ async function activateWithInstalledDistribution(
     commandRunner(
       'codeQL.openReferencedFile',
       openReferencedFile
+    )
+  );
+
+  ctx.subscriptions.push(
+    commandRunner(
+      'codeQL.previewQueryHelp',
+      previewQueryHelp
     )
   );
 

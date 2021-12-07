@@ -4,7 +4,7 @@
   "description": "CodeQL for Visual Studio Code",
   "author": "GitHub",
   "private": true,
-  "version": "1.5.7",
+  "version": "1.5.9",
   "publisher": "GitHub",
   "license": "MIT",
   "icon": "media/VS-marketplace-CodeQL-icon.png",
@@ -46,6 +46,7 @@
     "onCommand:codeQL.setCurrentDatabase",
     "onCommand:codeQL.viewAst",
     "onCommand:codeQL.openReferencedFile",
+    "onCommand:codeQL.previewQueryHelp",
     "onCommand:codeQL.chooseDatabaseFolder",
     "onCommand:codeQL.chooseDatabaseArchive",
     "onCommand:codeQL.chooseDatabaseInternet",
@@ -284,6 +285,10 @@
         "title": "CodeQL: Run Remote Query"
       },
       {
+        "command": "codeQL.openRemoteQueriesView",
+        "title": "CodeQL: Open Remote Queries View"
+      },
+      {
         "command": "codeQL.runQueries",
         "title": "CodeQL: Run Queries in Selected Files"
       },
@@ -294,6 +299,10 @@
       {
         "command": "codeQL.openReferencedFile",
         "title": "CodeQL: Open Referenced File"
+      },
+      {
+        "command": "codeQL.previewQueryHelp",
+        "title": "CodeQL: Preview Query Help"
       },
       {
         "command": "codeQL.quickQuery",
@@ -682,6 +691,11 @@
           "when": "view == codeQLQueryHistory"
         },
         {
+          "command": "codeQL.previewQueryHelp",
+          "group": "9_qlCommands",
+          "when": "view == codeQLQueryHistory && resourceScheme == .qhelp && isWorkspaceTrusted"
+        },
+        {
           "command": "codeQLTests.showOutputDifferences",
           "group": "qltest@1",
           "when": "view == test-explorer && viewItem == testWithSource"
@@ -712,6 +726,11 @@
           "command": "codeQL.openReferencedFile",
           "group": "9_qlCommands",
           "when": "resourceExtname == .qlref"
+        },
+        {
+          "command": "codeQL.previewQueryHelp",
+          "group": "9_qlCommands",
+          "when": "resourceExtname == .qhelp && isWorkspaceTrusted"
         }
       ],
       "commandPalette": [
@@ -732,6 +751,10 @@
           "when": "config.codeQL.canary && editorLangId == ql && resourceExtname == .ql"
         },
         {
+          "command": "codeQL.openRemoteQueriesView",
+          "when": "config.codeQL.canary"
+        },
+        {
           "command": "codeQL.runQueries",
           "when": "false"
         },
@@ -742,6 +765,10 @@
         {
           "command": "codeQL.openReferencedFile",
           "when": "resourceExtname == .qlref"
+        },
+        {
+          "command": "codeQL.previewQueryHelp",
+          "when": "resourceExtname == .qhelp && isWorkspaceTrusted"
         },
         {
           "command": "codeQL.setCurrentDatabase",
@@ -900,6 +927,10 @@
         {
           "command": "codeQL.openReferencedFile",
           "when": "resourceExtname == .qlref"
+        },
+        {
+          "command": "codeQL.previewQueryHelp",
+          "when": "resourceExtname == .qhelp && isWorkspaceTrusted"
         }
       ]
     },
@@ -969,6 +1000,9 @@
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "semver": "~7.3.2",
+    "stream": "^0.0.2",
+    "stream-chain": "~2.2.4",
+    "stream-json": "~1.7.3",
     "tmp": "^0.1.0",
     "tmp-promise": "~3.0.2",
     "tree-kill": "~1.2.2",
@@ -993,7 +1027,7 @@
     "@types/gulp-sourcemaps": "0.0.32",
     "@types/js-yaml": "^3.12.5",
     "@types/jszip": "~3.1.6",
-    "@types/mocha": "^8.2.0",
+    "@types/mocha": "^9.0.0",
     "@types/node": "^12.14.1",
     "@types/node-fetch": "~2.5.2",
     "@types/proxyquire": "~1.3.28",
@@ -1003,6 +1037,8 @@
     "@types/semver": "~7.2.0",
     "@types/sinon": "~7.5.2",
     "@types/sinon-chai": "~3.2.3",
+    "@types/stream-chain": "~2.0.1",
+    "@types/stream-json": "~1.7.1",
     "@types/through2": "^2.0.36",
     "@types/tmp": "^0.1.0",
     "@types/unzipper": "~0.10.1",
@@ -1026,8 +1062,8 @@
     "husky": "~4.2.5",
     "jsonc-parser": "^2.3.0",
     "lint-staged": "~10.2.2",
-    "mocha": "^8.2.1",
-    "mocha-sinon": "~2.1.0",
+    "mocha": "^9.1.3",
+    "mocha-sinon": "~2.1.2",
     "npm-run-all": "^4.1.5",
     "prettier": "~2.0.5",
     "proxyquire": "~2.1.3",

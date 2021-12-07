@@ -1,6 +1,5 @@
 import * as cpp from 'child-process-promise';
 import * as child_process from 'child_process';
-import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as sarif from 'sarif';
 import { SemVer } from 'semver';
@@ -17,6 +16,7 @@ import { assertNever } from './pure/helpers-pure';
 import { QueryMetadata, SortDirection } from './pure/interface-types';
 import { Logger, ProgressReporter } from './logging';
 import { CompilationMessage } from './pure/messages';
+import { sarifParser } from './sarif-parser';
 import { dbSchemeToLanguage } from './helpers';
 
 /**
@@ -86,6 +86,15 @@ export type QlpacksInfo = { [name: string]: string[] };
  * The expected output of `codeql resolve languages`.
  */
 export type LanguagesInfo = { [name: string]: string[] };
+
+/** Information about an ML model, as resolved by `codeql resolve ml-models`. */
+export type MlModelInfo = {
+  checksum: string;
+  path: string;
+};
+
+/** The expected output of `codeql resolve ml-models`. */
+export type MlModelsInfo = { models: MlModelInfo[] };
 
 /**
  * The expected output of `codeql resolve qlref`.
@@ -160,7 +169,7 @@ export class CodeQLCliServer implements Disposable {
   /** Version of current cli, lazily computed by the `getVersion()` method */
   private _version: SemVer | undefined;
 
-  /** 
+  /**
    * The languages supported by the current version of the CLI, computed by `getSupportedLanguages()`.
    */
   private _supportedLanguages: string[] | undefined;
@@ -584,6 +593,12 @@ export class CodeQLCliServer implements Disposable {
     return await this.runJsonCodeQlCliCommand<QueryMetadata>(['resolve', 'metadata'], [queryPath], 'Resolving query metadata');
   }
 
+  /** Resolves the ML models that should be available when evaluating a query. */
+  async resolveMlModels(additionalPacks: string[]): Promise<MlModelsInfo> {
+    return await this.runJsonCodeQlCliCommand<MlModelsInfo>(['resolve', 'ml-models'], ['--additional-packs',
+      additionalPacks.join(path.delimiter)], 'Resolving ML models', false);
+  }
+
   /**
    * Gets the RAM setting for the query server.
    * @param queryMemoryMb The maximum amount of RAM to use, in MB.
@@ -620,6 +635,20 @@ export class CodeQLCliServer implements Disposable {
     subcommandArgs.push(archivePath);
 
     return await this.runCodeQlCliCommand(['database', 'unbundle'], subcommandArgs, `Extracting ${archivePath} to directory ${target}`);
+  }
+
+  /**
+   * Uses a .qhelp file to generate Query Help documentation in a specified format.
+   * @param pathToQhelp The path to the .qhelp file
+   * @param format The format in which the query help should be generated {@link https://codeql.github.com/docs/codeql-cli/manual/generate-query-help/#cmdoption-codeql-generate-query-help-format}
+   * @param outputDirectory The output directory for the generated file
+   */
+  async generateQueryHelp(pathToQhelp: string, outputDirectory?: string): Promise<string> {
+    const subcommandArgs = ['--format=markdown'];
+    if (outputDirectory) subcommandArgs.push('--output', outputDirectory);
+    subcommandArgs.push(pathToQhelp);
+
+    return await this.runCodeQlCliCommand(['generate', 'query-help'], subcommandArgs, `Generating qhelp in markdown format at ${outputDirectory}`);
   }
 
   /**
@@ -682,22 +711,7 @@ export class CodeQLCliServer implements Disposable {
 
   async interpretBqrs(metadata: QueryMetadata, resultsPath: string, interpretedResultsPath: string, sourceInfo?: SourceInfo): Promise<sarif.Log> {
     await this.runInterpretCommand(SARIF_FORMAT, metadata, resultsPath, interpretedResultsPath, sourceInfo);
-
-    let output: string;
-    try {
-      output = await fs.readFile(interpretedResultsPath, 'utf8');
-    } catch (e) {
-      const rawMessage = e.stderr || e.message;
-      const errorMessage = rawMessage.startsWith('Cannot create a string')
-        ? `SARIF too large. ${rawMessage}`
-        : rawMessage;
-      throw new Error(`Reading output of interpretation failed: ${errorMessage}`);
-    }
-    try {
-      return JSON.parse(output) as sarif.Log;
-    } catch (err) {
-      throw new Error(`Parsing output of interpretation failed: ${err.stderr || err}`);
-    }
+    return await sarifParser(interpretedResultsPath);
   }
 
   async generateResultsCsv(metadata: QueryMetadata, resultsPath: string, csvPath: string, sourceInfo?: SourceInfo): Promise<void> {
@@ -792,7 +806,7 @@ export class CodeQLCliServer implements Disposable {
   /**
    * Gets the list of available languages. Refines the result of `resolveLanguages()`, by excluding
    * extra things like "xml" and "properties".
-   * 
+   *
    * @returns An array of languages that are supported by the current version of the CodeQL CLI.
    */
   public async getSupportedLanguages(): Promise<string[]> {
@@ -1143,7 +1157,7 @@ export class CliVersionConstraint {
 
   /**
    * CLI version where database registration was introduced
-   */
+  */
   public static CLI_VERSION_WITH_DB_REGISTRATION = new SemVer('2.4.1');
 
   /**
@@ -1166,6 +1180,16 @@ export class CliVersionConstraint {
    * CLI version where remote queries are supported.
    */
   public static CLI_VERSION_REMOTE_QUERIES = new SemVer('2.6.3');
+
+  /**
+   * CLI version where the `resolve ml-models` subcommand was introduced.
+   */
+  public static CLI_VERSION_WITH_RESOLVE_ML_MODELS = new SemVer('2.7.3');
+
+  /**
+   * CLI version where the `--old-eval-stats` option to the query server was introduced.
+   */
+  public static CLI_VERSION_WITH_OLD_EVAL_STATS = new SemVer('2.7.4');
 
   constructor(private readonly cli: CodeQLCliServer) {
     /**/
@@ -1211,4 +1235,11 @@ export class CliVersionConstraint {
     return this.isVersionAtLeast(CliVersionConstraint.CLI_VERSION_REMOTE_QUERIES);
   }
 
+  async supportsResolveMlModels() {
+    return this.isVersionAtLeast(CliVersionConstraint.CLI_VERSION_WITH_RESOLVE_ML_MODELS);
+  }
+
+  async supportsOldEvalStats() {
+    return this.isVersionAtLeast(CliVersionConstraint.CLI_VERSION_WITH_OLD_EVAL_STATS);
+  }
 }
