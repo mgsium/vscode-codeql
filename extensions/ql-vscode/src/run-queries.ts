@@ -554,7 +554,8 @@ export async function determineSelectedQuery(selectedResourceUri: Uri | undefine
 
 export interface QueryInitInfo {
   query: QueryInfo,
-  historyItemOptions: QueryHistoryItemOptions
+  historyItemOptions: QueryHistoryItemOptions,
+  availableMlModels: cli.MlModelInfo[]
 }
 
 export async function initQuery(
@@ -563,7 +564,7 @@ export async function initQuery(
   quickEval: boolean,
   selectedQueryUri: Uri | undefined,
   templates?: messages.TemplateDefinitions,
-) : Promise<QueryInitInfo> {
+): Promise<QueryInitInfo> {
   if (!db.contents || !db.contents.dbSchemeUri) {
     throw new Error(`Database ${db.databaseUri} does not have a CodeQL database scheme.`);
   }
@@ -640,7 +641,7 @@ export async function initQuery(
 
   const query = new QueryInfo(qlProgram, db, packConfig.dbscheme, quickEvalPosition, metadata, templates);
 
-  return { historyItemOptions: historyItemOptions, query: query };
+  return { historyItemOptions: historyItemOptions, query: query, availableMlModels: availableMlModels };
 }
 
 export async function compileAndRunQueryAgainstDatabase(
@@ -659,7 +660,7 @@ export async function compileAndRunQueryAgainstDatabase(
     quickEval,
     selectedQueryUri,
     templates
-  ); 
+  );
   return compileAndRunInitializedQueryAgainstDatabase(
     cliServer,
     qs,
@@ -668,7 +669,8 @@ export async function compileAndRunQueryAgainstDatabase(
     progress,
     token,
     queryInitInfo.query,
-    queryInitInfo.historyItemOptions
+    queryInitInfo.historyItemOptions,
+    queryInitInfo.availableMlModels
   );
 }
 
@@ -680,7 +682,8 @@ export async function compileAndRunInitializedQueryAgainstDatabase(
   progress: ProgressCallback,
   token: CancellationToken,
   query: QueryInfo,
-  historyItemOptions: QueryHistoryItemOptions
+  historyItemOptions: QueryHistoryItemOptions,
+  availableMlModels: cli.MlModelInfo[]
 ): Promise<QueryWithResults> {
 
   const upgradeDir = await tmp.dir({ dir: upgradesTmpDir.name, unsafeCleanup: true });
@@ -772,12 +775,12 @@ export function createResult(
   // In case compilation was unsuccessful
   if (!(queryResultType == messages.QueryResultType.SUCCESS)) {
     const err: string = (queryResultType == messages.QueryResultType.CANCELLATION) ?
-                        'Query run cancelled' : 'Query had compilation errors';
+      'Query run cancelled' : 'Query had compilation errors';
     return createSyntheticResult(
-      query, 
-      db, 
-      historyItemOptions, 
-      err, 
+      query,
+      db,
+      historyItemOptions,
+      err,
       messages.QueryResultType.OTHER_ERROR
     );
   }

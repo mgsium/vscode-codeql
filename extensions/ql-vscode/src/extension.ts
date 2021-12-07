@@ -486,7 +486,7 @@ async function activateWithInstalledDistribution(
         databaseItem,
         quickEval,
         selectedQuery
-      ); 
+      );
 
       // Create QueryWithResults object
       const queryInfo = createResult(
@@ -501,7 +501,7 @@ async function activateWithInstalledDistribution(
       qhm.addCompletedQuery(runningQueryInfo);
 
       // Compile Query
-      const results: QueryWithResults  = await compileAndRunInitializedQueryAgainstDatabase(
+      const results: QueryWithResults = await compileAndRunInitializedQueryAgainstDatabase(
         cliServer,
         qs,
         databaseItem,
@@ -509,7 +509,8 @@ async function activateWithInstalledDistribution(
         progress,
         token,
         queryInitInfo.query,
-        queryInitInfo.historyItemOptions
+        queryInitInfo.historyItemOptions,
+        queryInitInfo.availableMlModels
       );
 
       const completeQuery = qhm.buildCompletedQuery(results);
